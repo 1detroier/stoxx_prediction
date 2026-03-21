@@ -1,0 +1,25 @@
+# STOXX-stocks Training Pipeline Requirements
+# Install with: pip install -r requirements.txt
+
+# Core data science packages
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Deep learning
+tensorflow>=2.15.0
+tensorflowjs>=4.15.0  # For TensorFlow.js model export
+
+# Data fetching (free, no API key required)
+yfinance>=0.2.0
+
+# Supabase integration (installed separately to avoid uvloop on Windows)
+python-dotenv>=1.0.0
+
+# HTTP requests (for data fetching)
+requests>=2.31.0
+
+# HDF5 support (for panel tensor storage)
+h5py>=3.10.0
+
+# Optional: Data validation
+pydantic>=2.0.0

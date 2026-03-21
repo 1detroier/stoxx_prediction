@@ -1,0 +1,60 @@
+{
+  "training_date": "2026-03-20T21:33:10.390699Z",
+  "git_commit": "no-git",
+  "model_version": "v20260320",
+  "accuracy": 0.5027458071708679,
+  "balanced_accuracy": 0.5116581936860604,
+  "optimal_threshold": 0.55,
+  "distressed_accuracy": 0.4604923743174543,
+  "healthy_accuracy": 0.5372411033703633,
+  "zscore_params": {
+    "return_1d": {
+      "mean": 0.0008412992777910535,
+      "std": 0.02375669685006724
+    },
+    "return_1m": {
+      "mean": 0.017085707841287236,
+      "std": 0.10684377276744904
+    },
+    "return_6m": {
+      "mean": 0.07654674253291993,
+      "std": 0.26017723435994594
+    },
+    "return_9m": {
+      "mean": 0.08197093668997482,
+      "std": 0.2863236981732542
+    }
+  },
+  "features_hash": "916b49298ce5e4dc9f0aba1e1ff8db3ac442de1cd821f28ac6808e39a030531e",
+  "features": [
+    "return_1d",
+    "return_1m",
+    "return_6m",
+    "return_9m",
+    "z_return_1d",
+    "z_return_1m",
+    "z_return_6m",
+    "z_return_9m",
+    "volatility_20d",
+    "atr_ratio",
+    "volume_ratio",
+    "rsi_14",
+    "macd",
+    "macd_signal",
+    "macd_hist",
+    "eur_strength",
+    "cross_border",
+    "ecb_policy_phase"
+  ],
+  "n_tickers": 45,
+  "n_samples": 56451,
+  "n_timesteps": 60,
+  "n_features": 18,
+  "lstm_units": [128, 32],
+  "dropout": 0.2,
+  "epochs": 50,
+  "batch_size": 64,
+  "prediction_horizon": 10,
+  "export_format": "keras",
+  "model_path": "/models/distress/model.json"
+}

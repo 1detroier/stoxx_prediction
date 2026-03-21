@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: 'Inter', system-ui, sans-serif;
+}
+
+/* Financial dashboard dark theme */
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #0f0f1a;
+  color: #e0e0e0;
+  font-family: var(--font-inter);
+}
+
+/* Custom scrollbar for financial dashboard */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #131722;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2d3748;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a5568;
+}
+
+/* TradingView-style chart container */
+.chart-container {
+  background-color: #131722;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+/* Data table styles */
+.data-table {
+  @apply w-full text-sm;
+}
+
+.data-table th {
+  @apply text-left text-text-secondary font-medium px-4 py-3 border-b border-border;
+}
+
+.data-table td {
+  @apply px-4 py-3 border-b border-border;
+}
+
+.data-table tr:hover td {
+  @apply bg-background-hover;
+}
+
+/* Badge styles */
+.badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+}
+
+.badge-success {
+  @apply bg-accent-success/20 text-accent-success;
+}
+
+.badge-danger {
+  @apply bg-accent-danger/20 text-accent-danger;
+}
+
+.badge-warning {
+  @apply bg-accent-warning/20 text-accent-warning;
+}
+
+.badge-neutral {
+  @apply bg-border text-text-secondary;
+}
+
+/* Input styles */
+input, select {
+  @apply bg-background-tertiary border border-border rounded-lg px-3 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent;
+}
+
+/* Button base */
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background;
+}
+
+.btn-primary {
+  @apply bg-accent text-white hover:bg-accent-hover focus:ring-accent;
+}
+
+.btn-secondary {
+  @apply bg-background-tertiary text-text-primary border border-border hover:bg-background-hover focus:ring-border;
+}
+
+.btn-success {
+  @apply bg-accent-success text-white hover:bg-accent-success/90 focus:ring-accent-success;
+}
+
+.btn-danger {
+  @apply bg-accent-danger text-white hover:bg-accent-danger/90 focus:ring-accent-danger;
+}
+
+/* Toast animations */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+/* Focus visible styles for accessibility */
+.focus-visible-ring:focus-visible {
+  @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background;
+}
+
+/* Touch target sizing for mobile accessibility */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+  .container {
+    @apply px-3;
+  }
+}
