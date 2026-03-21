@@ -1,26 +1,35 @@
 // ============================================
 // TensorFlow.js Model Service
 // ============================================
+//
+// IMPORTANT: TensorFlow.js is loaded DYNAMICALLY (not statically) to avoid
+// bloating the client bundle. The @tensorflow/tfjs package is ~1.5-2MB
+// and would cause ERR_INSUFFICIENT_RESOURCES on load if bundled statically.
+//
+// All tf.* calls are inside dynamic import() followed by await tf.ready()
 
-import * as tf from '@tensorflow/tfjs'
 import type {
   ModelStatus,
   PredictionResult,
   ZScoreParams,
   ModelMetadata,
-  MODEL_CONFIG,
 } from './types'
 import { zScoreNormalizer } from './ZScoreNormalizer'
 import { featureExtractor } from './FeatureExtractor'
+
+// Type for the dynamically loaded tf namespace
+type TfNamespace = typeof import('@tensorflow/tfjs')
 
 /**
  * ModelService manages TensorFlow.js model lifecycle
  * - Singleton pattern for single model instance
  * - Memory management with automatic disposal
  * - Z-score parameter caching
+ * - Lazy-loads TensorFlow.js only when needed
  */
 export class ModelService {
-  private model: tf.LayersModel | null = null
+  private model: import('@tensorflow/tfjs').LayersModel | null = null
+  private tf: TfNamespace | null = null
   private status: ModelStatus = 'idle'
   private lastUsed: number = 0
   private error: string | null = null
@@ -99,6 +108,17 @@ export class ModelService {
   }
 
   /**
+   * Ensure TensorFlow.js is loaded (lazy load on first use)
+   */
+  private async ensureTf(): Promise<TfNamespace> {
+    if (!this.tf) {
+      this.tf = await import('@tensorflow/tfjs')
+      await this.tf.ready()
+    }
+    return this.tf
+  }
+
+  /**
    * Load TensorFlow.js model from URL
    */
   async loadModel(modelPath?: string): Promise<void> {
@@ -113,13 +133,16 @@ export class ModelService {
       // Dispose existing model if any
       await this.disposeModel()
 
+      // Lazy-load TensorFlow.js
+      const tf = await this.ensureTf()
+
       const path = modelPath || this.modelPath
 
       // Load model from URL
       this.model = await tf.loadLayersModel(path)
       
       // Warm up the model with a dummy input
-      await this.warmUp()
+      await this.warmUp(tf)
 
       this.status = 'ready'
       this.lastUsed = Date.now()
@@ -137,7 +160,7 @@ export class ModelService {
   /**
    * Warm up model by running inference with dummy data
    */
-  private async warmUp(): Promise<void> {
+  private async warmUp(tf: TfNamespace): Promise<void> {
     if (!this.model) return
 
     try {
@@ -175,77 +198,62 @@ export class ModelService {
     this.scheduleDisposal()
 
     try {
-      // Use tf.tidy for automatic memory cleanup
-      // Note: tf.tidy is synchronous, so we run sync prediction first
-      const result = tf.tidy(() => {
-        // Input shape: [batch=1, timesteps=60, features=18]
-        // We need to create a 3D tensor with 60 timesteps, each having 18 features
-        // For a simple feature vector of 18 values, we repeat it across 60 timesteps
-        
-        // Create 3D tensor: [batch=1, timesteps=60, features=18]
-        // Reshape features array to 3D: [[[features]], [[features]], ... 60 times]
-        const timesteps = 60
-        const numFeatures = 18
-        
-        // Ensure features has exactly numFeatures elements
-        const featureVector: number[] = features.slice(0, numFeatures)
-        while (featureVector.length < numFeatures) {
-          featureVector.push(0)
-        }
-        
-        // Create 3D tensor manually: each timestep gets the same feature vector
-        // Shape: [batch=1, timesteps=60, features=12]
-        const inputData: number[][][] = []
-        for (let t = 0; t < timesteps; t++) {
-          // Each element is a batch of 1 timestep with numFeatures
-          inputData.push([[...featureVector]])
-        }
-        
-        const inputTensor = tf.tensor3d(inputData, [1, timesteps, numFeatures], 'float32')
-        
-        // Run inference
-        const output = this.model!.predict(inputTensor) as tf.Tensor
-        
-        // For synchronous access, we need to handle this differently
-        // Get data synchronously if possible, or use a workaround
-        let probability: number
-        
-        if (typeof output.dataSync === 'function') {
-          // Synchronous data access
-          const data = output.dataSync()
-          probability = data[0]
-        } else {
-          // Fallback - should not happen for LayersModel
-          probability = 0.5
-        }
+      // Get tf namespace
+      const tf = await this.ensureTf()
 
-        // Clean up tensors
-        inputTensor.dispose()
-        output.dispose()
+      // Input shape: [batch=1, timesteps=60, features=18]
+      const timesteps = 60
+      const numFeatures = 18
+      
+      // Ensure features has exactly numFeatures elements
+      const featureVector: number[] = features.slice(0, numFeatures)
+      while (featureVector.length < numFeatures) {
+        featureVector.push(0)
+      }
+      
+      // Create 3D tensor: each timestep gets the same feature vector
+      const inputData: number[][][] = []
+      for (let t = 0; t < timesteps; t++) {
+        inputData.push([[...featureVector]])
+      }
+      
+      const inputTensor = tf.tensor3d(inputData, [1, timesteps, numFeatures], 'float32')
+      
+      // Run inference
+      const output = this.model.predict(inputTensor) as tf.Tensor
+      
+      let probability: number
+      if (typeof output.dataSync === 'function') {
+        const data = output.dataSync()
+        probability = data[0]
+      } else {
+        probability = 0.5
+      }
 
-        // Determine direction based on probability
-        let direction: 'UP' | 'DOWN' | 'NEUTRAL'
-        if (probability > 0.55) {
-          direction = 'UP'
-        } else if (probability < 0.45) {
-          direction = 'DOWN'
-        } else {
-          direction = 'NEUTRAL'
-        }
+      // Clean up tensors
+      inputTensor.dispose()
+      output.dispose()
 
-        // Calculate confidence (distance from 0.5)
-        const confidence = Math.abs(probability - 0.5) * 2
+      // Determine direction based on probability
+      let direction: 'UP' | 'DOWN' | 'NEUTRAL'
+      if (probability > 0.55) {
+        direction = 'UP'
+      } else if (probability < 0.45) {
+        direction = 'DOWN'
+      } else {
+        direction = 'NEUTRAL'
+      }
 
-        return {
-          direction,
-          confidence,
-          rawProbability: probability,
-          modelVersion: this.modelVersion || 'unknown',
-          timestamp: new Date().toISOString(),
-        }
-      })
+      // Calculate confidence (distance from 0.5)
+      const confidence = Math.abs(probability - 0.5) * 2
 
-      return result
+      return {
+        direction,
+        confidence,
+        rawProbability: probability,
+        modelVersion: this.modelVersion || 'unknown',
+        timestamp: new Date().toISOString(),
+      }
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Prediction failed'
       throw err
@@ -302,8 +310,15 @@ export class ModelService {
       this.model = null
     }
 
-    // Force garbage collection hint
-    await tf.nextFrame()
+    // Clean up tf namespace to free memory
+    if (this.tf) {
+      try {
+        await this.tf.nextFrame()
+      } catch {
+        // ignore
+      }
+      this.tf = null
+    }
     
     this.status = 'idle'
   }
