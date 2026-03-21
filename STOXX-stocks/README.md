@@ -1,109 +1,137 @@
-# STOXX-stocks — European Stock Prediction Platform
+# STOXX-stocks
 
-A full-stack web application for visualizing and predicting European stock performance using a panel-based LSTM model trained on STOXX 600 companies.
+**European Stock Prediction Platform** — Interactive dashboard with browser-based ML inference.
 
-**Architecture:** Next.js 14 + TypeScript + Tailwind + Supabase + TensorFlow.js  
-**Constraint:** Zero-cost infrastructure (free tiers only)  
-**Target:** 45 European companies (38 healthy + 7 distressed)  
-**Model:** Panel-based LSTM for 3-day binary directional prediction
+Next.js 14 · TensorFlow.js · Supabase · Zero-cost infrastructure
 
----
-
-## Features
-
-### Core Functionality
-- **Stock Dashboard**: Interactive charts powered by TradingView Lightweight Charts
-- **Real-time Quotes**: 15-minute delayed prices via Finnhub API proxy
-- **Price History**: 20+ years of historical data from Supabase
-- **ML Predictions**: Client-side TensorFlow.js inference for 3-day directional prediction
-- **Prediction Tracking**: Log predictions vs actual outcomes for validation
-
-### Technical Highlights
-- **Local Training Pipeline**: Python scripts for data fetching, feature engineering, and model training
-- **Z-score Normalization**: Consistent feature scaling for accurate inference
-- **Distress-Aware Training**: 15% of samples from distressed companies to learn failure patterns
-- **API Key Security**: All external API keys proxied through Next.js API routes
-- **Row-Level Security**: Supabase RLS policies for data protection
+[Live Demo](#) · [Documentation](#) · [Vercel Deploy](#)
 
 ---
 
-## Tech Stack
+## What It Does
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| Frontend | Next.js 14 | App Router, Server Components |
-| Language | TypeScript 5 | Type safety |
-| Styling | Tailwind CSS | Utility-first CSS |
-| Database | Supabase | PostgreSQL + Storage |
-| ML Inference | TensorFlow.js | Browser-based prediction |
-| ML Training | Python + TensorFlow | Local model training |
-| Data Sources | Alpha Vantage, Finnhub | Stock prices & quotes |
+Predict 10-day directional movement (↑ Up / ↓ Down) for 45 STOXX European stocks — **in your browser**, with the model running client-side. No server-side inference, no GPU costs.
+
+```
+Browser opens dashboard
+       │
+       ├── Fetches historical prices from Supabase
+       ├── Fetches live quote from Finnhub (15-min delay)
+       │
+       ├── Extracts 18 technical features (returns, volatility, MACD, RSI...)
+       ├── Z-score normalizes using training parameters
+       ├── Runs LSTM inference (TensorFlow.js, ~250 KB model)
+       │
+       └── Displays prediction + confidence + chart
+```
+
+---
+
+## Key Features
+
+| Feature | Details |
+|---------|---------|
+| **TradingView Charts** | Lightweight Charts 4.2 with resolution switching |
+| **Live Quotes** | Finnhub proxy, 60 req/min rate-limited |
+| **Browser ML** | BiLSTM [128+32] — 64,193 params, loads in ~1s |
+| **18 Features** | Log returns, Z-score returns, ATR, RSI, MACD, ECB phase... |
+| **Distress-Aware** | 15% of training samples from 7 distressed companies |
+| **Walk-Forward CV** | 4-fold validation with purge/embargo — no data leakage |
+| **Prediction Tracking** | Log predictions, compare vs actual outcomes |
+| **Security Headers** | CSP, HSTS, X-Frame-Options via Next.js middleware |
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 18+
-- Python 3.10+
-- Supabase account
-- Finnhub API key ([finnhub.io](https://finnhub.io))
-- Alpha Vantage API key ([alphavantage.co](https://www.alphavantage.co))
-
-### 1. Clone and Install
-
 ```bash
-git clone <repository-url>
-cd STOXX-stocks
+# 1. Install
 npm install
-```
 
-### 2. Configure Environment
-
-```bash
+# 2. Configure environment
 cp .env.example .env.local
+# Fill in: SUPABASE_URL, SUPABASE_ANON_KEY, FINNHUB_API_KEY
+
+# 3. Start development
+npm run dev
+# → http://localhost:3000
 ```
 
-Edit `.env.local` with your credentials:
+See [SETUP.md](./SETUP.md) for full Supabase setup instructions.
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-FINNHUB_API_KEY=your_finnhub_key
-ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
-NEXT_PUBLIC_MODEL_PATH=/models/latest/model.json
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 14 (App Router) + TypeScript + Tailwind CSS |
+| Charts | TradingView Lightweight Charts 4.2 |
+| ML Inference | TensorFlow.js 4.22 (browser, no GPU) |
+| ML Training | Python 3.11 + TensorFlow 2.15 (local) |
+| Database | Supabase (PostgreSQL + Storage) |
+| Data Sources | Finnhub (live), yfinance (historical) |
+| Deployment | Vercel (Next.js preset) |
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Browser (Client)                          │
+│                                                                   │
+│   ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│   │  Dashboard   │  │   Charts     │  │  TensorFlow.js      │  │
+│   │  (Next.js)   │  │ (TradingView)│  │  Model Inference     │  │
+│   └──────┬───────┘  └──────┬───────┘  └──────────┬───────────┘  │
+└──────────┼──────────────────┼────────────────────┼──────────────┘
+           │                  │                    │
+           │ GET /api/        │ GET /api/          │ Loads /models/
+           │ companies, prices │ finnhub/quote     │ distress/model.json
+           │                  │                    │
+┌──────────▼──────────────────▼────────────────────▼──────────────┐
+│                     Next.js (Vercel Serverless)                   │
+│                                                                   │
+│   Rate limiter (60/min IP)  ·  Security headers  ·  API key proxy │
+│                                                                   │
+│   /api/models/latest ──────────────► local metadata.json           │
+│         │  (or Supabase fallback)                                 │
+│         ▼                                                          │
+│   ┌──────────────────────────────────────────────────────────┐   │
+│   │                   Supabase                                 │   │
+│   │  companies  ·  prices  ·  models  ·  predictions          │   │
+│   └──────────────────────────────────────────────────────────┘   │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
-### 3. Set Up Supabase
+---
 
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Run `supabase/schema.sql` in SQL Editor
-3. Run `supabase/seed.sql` in SQL Editor
-4. Create a public storage bucket named `models`
-
-See [SETUP.md](./SETUP.md) for detailed instructions.
-
-### 4. Train the Model
+## Training Pipeline
 
 ```bash
 cd training
+python -m venv venv && source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# 1. Fetch historical data (~2 min)
 python data_fetcher.py --output ../data/raw
+
+# 2. Engineer 18 features (~1 min)
 python feature_engineer.py --input ../data/raw --output ../data/processed
-python train_lstm.py --input ../data/processed --output ../public/models
-python upload_to_supabase.py --model-dir ../public/models
+
+# 3. Train model (~4 hours, CPU)
+python train_lstm.py --input ../data/processed --output ../models
+
+# 4. Convert to TensorFlow.js (~30 sec)
+python ./training/convert_tfjs_model.py \
+  --input ./models_bce/distress_predictor.keras \
+  --output ./public/models/distress
+
+# 5. Commit the TFJS files → push → Vercel deploys automatically
 ```
 
-See [docs/TRAINING.md](./docs/TRAINING.md) for the complete training workflow.
-
-### 5. Run the Application
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) to see the dashboard.
+See [docs/TRAINING.md](./docs/TRAINING.md) for detailed pipeline documentation.
 
 ---
 
@@ -112,133 +140,147 @@ Open [http://localhost:3000](http://localhost:3000) to see the dashboard.
 ```
 STOXX-stocks/
 ├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── api/                # API routes
-│   │   │   ├── companies/      # GET /api/companies
-│   │   │   ├── prices/         # GET /api/prices
-│   │   │   ├── predictions/    # GET,POST /api/predictions
-│   │   │   ├── finnhub/        # Finnhub proxy
-│   │   │   └── models/         # Model metadata
-│   │   ├── page.tsx            # Dashboard home
-│   │   ├── layout.tsx          # Root layout
-│   │   └── globals.css         # Global styles
-│   ├── components/             # React components
-│   │   ├── charts/             # TradingView chart components
-│   │   ├── dashboard/          # Dashboard layout components
-│   │   ├── metrics/            # Performance metric displays
-│   │   ├── predictions/        # Prediction-related components
-│   │   └── ui/                 # Reusable UI components
-│   ├── hooks/                  # Custom React hooks
-│   │   ├── useModelLoader.ts   # TensorFlow.js model loading
-│   │   └── usePrediction.ts     # Prediction logic
-│   ├── lib/                    # Core libraries
-│   │   ├── ml/                 # ML utilities
-│   │   │   ├── ModelService.ts # TensorFlow.js service
-│   │   │   ├── FeatureExtractor.ts
-│   │   │   └── ZScoreNormalizer.ts
-│   │   ├── repositories/       # Database repositories
-│   │   │   ├── CompanyRepository.ts
-│   │   │   ├── PricesRepository.ts
-│   │   │   ├── ModelsRepository.ts
-│   │   │   └── PredictionsRepository.ts
-│   │   └── supabase.ts         # Supabase client
-│   └── types/                  # TypeScript definitions
-│       └── index.ts
-├── docs/                       # Documentation
-│   ├── ARCHITECTURE.md         # System architecture
-│   ├── API.md                  # API reference
-│   └── TRAINING.md             # Training pipeline guide
-├── supabase/                   # Database schema
-│   ├── schema.sql               # Table definitions + RLS
-│   └── seed.sql                 # Initial data (45 companies)
-├── training/                   # Python ML pipeline
-│   ├── data_fetcher.py          # Alpha Vantage fetcher
-│   ├── feature_engineer.py      # Feature engineering
-│   ├── train_lstm.py            # LSTM training
-│   ├── upload_to_supabase.py    # Model upload
-│   ├── validation_suite.py      # Data validation
-│   └── README.md                # Training docs
-├── public/
-│   └── models/                  # Trained model files
-├── data/                       # Local training data
-│   ├── raw/                     # Raw CSV files (temporary)
-│   └── processed/               # Processed training data
-├── .env.example                # Environment template
-├── next.config.js              # Next.js config
-├── tailwind.config.ts          # Tailwind config
-├── package.json
-├── tsconfig.json
-└── README.md                   # This file
+│   ├── app/
+│   │   ├── api/                          # API routes
+│   │   │   ├── companies/               # Company list & filters
+│   │   │   ├── prices/                  # Historical OHLCV data
+│   │   │   ├── finnhub/quote/          # Live quote proxy
+│   │   │   ├── models/latest/          # Model metadata
+│   │   │   └── predictions/             # Prediction log
+│   │   ├── page.tsx                    # Dashboard home
+│   │   └── stock/[ticker]/page.tsx    # Individual stock page
+│   ├── components/
+│   │   ├── charts/                     # TradingView charts
+│   │   ├── dashboard/                  # Company cards, filters
+│   │   ├── metrics/                    # Sharpe ratio, risk metrics
+│   │   ├── predictions/                 # Prediction panel, confidence meter
+│   │   └── ui/                        # Alert, Card, Skeleton, Toast...
+│   ├── hooks/                          # useApiCall, useModelLoader, usePrediction
+│   ├── lib/
+│   │   ├── ml/
+│   │   │   ├── ModelService.ts        # TFJS loading, inference, disposal
+│   │   │   ├── FeatureExtractor.ts    # 18-feature extraction from OHLCV
+│   │   │   ├── ZScoreNormalizer.ts   # Z-score normalization
+│   │   │   └── types.ts              # FEATURE_NAMES (18), MODEL_CONFIG
+│   │   ├── repositories/              # Supabase data access
+│   │   ├── api-utils.ts              # Shared error handling, search escaping
+│   │   ├── rate-limit.ts             # In-memory 60/min rate limiter
+│   │   └── supabase.ts               # Client-side Supabase
+│   ├── middleware.ts                  # Security headers (CSP, HSTS, X-Frame...)
+│   └── types/
+├── public/models/distress/           # Deployed TFJS model (committed to git)
+│   ├── model.json                     # Model topology
+│   └── group1-shard1of1.bin          # Weights (~257 KB)
+├── supabase/
+│   ├── schema.sql                    # Tables + RLS policies
+│   └── seed.sql                      # 45 companies (38H + 7D)
+├── training/                          # Python ML pipeline
+│   ├── data_fetcher.py               # yfinance historical data
+│   ├── feature_engineer.py           # 18 features, Z-score, panel tensor
+│   ├── train_lstm.py                # BiLSTM training, BCE loss, walk-forward CV
+│   ├── convert_tfjs_model.py        # Keras → TFJS (Windows-safe)
+│   ├── upload_to_supabase.py         # Upload model to Supabase Storage
+│   └── requirements.txt
+├── vercel.json                       # Vercel deployment config
+├── next.config.js
+└── package.json
 ```
 
 ---
 
-## Architecture Diagram
+## Model Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          User Browser                                │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────────┐ │
-│  │   Dashboard  │  │    Chart    │  │    Prediction Panel        │ │
-│  │  (Next.js)  │  │  (TradingView)│ │   (TensorFlow.js)          │ │
-│  └──────┬──────┘  └──────┬──────┘  └──────────────┬──────────────┘ │
-└─────────┼────────────────┼──────────────────────┼──────────────────┘
-          │                │                      │
-          │ GET /api/      │ GET /api/            │ Model Inference
-          │ companies,     │ prices, finnhub      │
-          │                │                      │
-┌─────────▼────────────────▼──────────────────────▼──────────────────┐
-│                       Next.js API Routes                            │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────────┐│
-│  │ /api/companies│  │ /api/prices  │  │ /api/finnhub/quote         ││
-│  │ /api/models   │  │ /api/predic.  │  │ (API key proxy)            ││
-│  └──────┬───────┘  └──────┬───────┘  └──────────────┬─────────────┘│
-└─────────┼─────────────────┼─────────────────────────┼──────────────┘
-          │                 │                         │
-┌─────────▼─────────────────▼─────────────────────────▼──────────────┐
-│                          Supabase                                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────────┐│
-│  │  PostgreSQL  │  │    Storage   │  │     Realtime              ││
-│  │  - companies │  │  - models/    │  │  (future)                 ││
-│  │  - prices    │  │                │  │                          ││
-│  │  - models    │  │                │  │                          ││
-│  │  - predictions│  │                │  │                          ││
-│  └──────────────┘  └──────────────┘  └────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────────┘
-          ▲
-          │ Model Upload
-          │
-┌─────────┴───────────────────────────────────────────────────────────┐
-│                       Local Python Pipeline                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────────┐│
-│  │data_fetcher  │─▶│feature_engin │─▶│train_lstm.py              ││
-│  │(Alpha Vantage)│  │(Z-score,     │  │(Panel LSTM)               ││
-│  │              │  │ rolling)      │  │                          ││
-│  └──────────────┘  └──────────────┘  └──────────────┬─────────────┘│
-│                                                     │              │
-│                                                     ▼              │
-│                              ┌──────────────────────────────────────┐│
-│                              │upload_to_supabase.py                  ││
-│                              │(Model artifacts + metadata)          ││
-│                              └──────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────────┘
-```
+| Property | Value |
+|----------|-------|
+| **Type** | BiLSTM (Bidirectional) → LSTM → Dense → Sigmoid |
+| **Units** | 128 (forward) + 128 (backward) → 32 → 1 |
+| **Input** | `[batch, 60 timesteps, 18 features]` |
+| **Lookback** | 60 trading days (~3 months) |
+| **Prediction** | 10-day directional (binary crossentropy) |
+| **Training** | 4-fold walk-forward CV, purge + embargo |
+| **Data** | 7 years, 45 companies, ~56K samples |
+| **Accuracy** | ~50–55% (expected for stock direction — near-random baseline) |
+
+### 18 Features
+
+| Group | Features |
+|-------|---------|
+| Returns (4) | `return_1d`, `return_1m`, `return_6m`, `return_9m` |
+| Z-Score Returns (4) | `z_return_1d`, `z_return_1m`, `z_return_6m`, `z_return_9m` |
+| Vol/Volume (3) | `volatility_20d`, `atr_ratio`, `volume_ratio` |
+| Momentum (4) | `rsi_14`, `macd`, `macd_signal`, `macd_hist` |
+| European (3) | `eur_strength`, `cross_border`, `ecb_policy_phase` |
 
 ---
 
-## API Reference
+## Training Universe
 
-See [docs/API.md](./docs/API.md) for detailed API documentation.
+**38 healthy + 7 distressed** European companies across 12 exchanges.
 
-### Available Endpoints
+| Distressed | Ticker | Company |
+|------------|--------|---------|
+| ⚠️ | VOW3.DE | Volkswagen |
+| ⚠️ | TKA.DE | Thyssenkrupp |
+| ⚠️ | UBI.PA | Ubisoft |
+| ⚠️ | SINCH.ST | Sinch |
+| ⚠️ | SDF.DE | K+S |
+| ⚠️ | DBK.DE | Deutsche Bank |
+| ⚠️ | VNA.DE | Vonovia |
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/companies` | GET | List companies with filters |
-| `/api/prices` | GET | Fetch price history |
-| `/api/finnhub/quote` | GET | Get real-time quote (15-min delay) |
-| `/api/models/latest` | GET | Get latest stable model metadata |
-| `/api/predictions` | GET, POST | Manage predictions |
+---
+
+## Environment Variables
+
+```env
+# Supabase (required)
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+
+# Server-side only (never exposed to client)
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+FINNHUB_API_KEY=xxx
+
+# Model path (defaults to /models/distress/model.json)
+NEXT_PUBLIC_MODEL_PATH=/models/distress/model.json
+```
+
+Set these in **Vercel → Settings → Environment Variables** before deploying.
+
+---
+
+## Security
+
+- ✅ API keys server-side only — proxied through Next.js API routes
+- ✅ Supabase RLS enabled on all tables
+- ✅ Rate limiting: 60 req/min per IP on Finnhub proxy
+- ✅ Error messages sanitized in production (details in dev only)
+- ✅ Search injection prevention (LIKE pattern escaping)
+- ✅ Ticker validation against 45-company universe
+- ✅ Security headers: CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy
+- ✅ TFJS model from static path — no path traversal risk
+
+---
+
+## Deploy to Vercel
+
+```bash
+# 1. Push to GitHub
+git remote add origin https://github.com/YOUR_USER/stoxx-stocks.git
+git push -u origin main
+
+# 2. Import in Vercel
+# → vercel.com/new → Import your repo
+
+# 3. Add Environment Variables in Vercel dashboard:
+#    NEXT_PUBLIC_SUPABASE_URL
+#    NEXT_PUBLIC_SUPABASE_ANON_KEY
+#    SUPABASE_SERVICE_ROLE_KEY
+#    FINNHUB_API_KEY
+
+# 4. Deploy — Vercel auto-builds with npm run build
+```
+
+TFJS model files are committed to `public/models/distress/` — no build-time conversion needed.
 
 ---
 
@@ -246,74 +288,15 @@ See [docs/API.md](./docs/API.md) for detailed API documentation.
 
 | Document | Description |
 |----------|-------------|
-| [README.md](./README.md) | Project overview (this file) |
-| [SETUP.md](./SETUP.md) | Detailed setup guide |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture |
+| [SETUP.md](./SETUP.md) | Full setup guide (Supabase, API keys, training) |
+| [docs/TRAINING.md](./docs/TRAINING.md) | Training pipeline walkthrough |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture & patterns |
 | [docs/API.md](./docs/API.md) | API endpoint reference |
-| [docs/TRAINING.md](./docs/TRAINING.md) | Training pipeline guide |
 | [PRD.md](./PRD.md) | Product requirements document |
-| [training/README.md](./training/README.md) | Python training scripts |
-
----
-
-## Training Universe
-
-The model is trained on 45 European companies (38 healthy + 7 distressed):
-
-| Category | Count | Purpose |
-|----------|-------|---------|
-| Healthy | 38 | Learn normal market patterns |
-| Distressed | 7 | Learn failure patterns (Volkswagen, Deutsche Bank, etc.) |
-
-### Distressed Companies
-
-| Ticker | Company | Issue |
-|--------|---------|-------|
-| VOW3.DE | Volkswagen | Emissions scandal |
-| TKA.DE | Thyssenkrupp | Restructuring |
-| UBI.PA | Ubisoft | Stock decline |
-| SINCH.ST | Sinch | Accounting issues |
-| SDF.DE | K+S | Commodity pressure |
-| DBK.DE | Deutsche Bank | Legacy issues |
-| VNA.DE | Vonovia | Market conditions |
-
----
-
-## Model Performance Targets
-
-| Metric | Target | Minimum |
-|--------|--------|---------|
-| Overall Accuracy | ~65% | 55% |
-| Healthy Accuracy | ~70% | 60% |
-| Distressed Accuracy | ~65% | 55% |
-
-If distressed accuracy falls below 55%, the model is not learning failure patterns effectively.
-
----
-
-## Security Model
-
-- **API Keys**: Stored server-side only, proxied through Next.js API routes
-- **RLS Policies**: Supabase Row Level Security for data access
-- **Client Inference**: TensorFlow.js runs entirely in browser
-- **No Secrets in Bundle**: Environment variables are never exposed to client
+| [AGENTS.md](../AGENTS.md) | React best practices (Vercel Engineering) |
 
 ---
 
 ## License
 
-MIT License - See project root for details.
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run `npm run lint` to check for issues
-5. Submit a pull request
-
----
-
-Last updated: 2026-03-18
+MIT
