@@ -19,6 +19,8 @@ import { featureExtractor } from './FeatureExtractor'
 
 // Type for the dynamically loaded tf namespace
 type TfNamespace = typeof import('@tensorflow/tfjs')
+// Tensor type for type annotations (no runtime impact)
+type TfTensor = import('@tensorflow/tfjs').Tensor
 
 /**
  * ModelService manages TensorFlow.js model lifecycle
@@ -220,7 +222,7 @@ export class ModelService {
       const inputTensor = tf.tensor3d(inputData, [1, timesteps, numFeatures], 'float32')
       
       // Run inference
-      const output = this.model.predict(inputTensor) as tf.Tensor
+      const output = this.model.predict(inputTensor) as TfTensor
       
       let probability: number
       if (typeof output.dataSync === 'function') {
