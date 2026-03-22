@@ -6,13 +6,13 @@
 
 import { useState, useCallback, useRef } from 'react'
 
-interface UseApiCallOptions<T> {
+interface UseApiCallOptions {
   /** Maximum number of retry attempts */
   maxRetries?: number
   /** Delay between retries in milliseconds */
   retryDelay?: number
   /** Function to call on successful completion */
-  onSuccess?: (data: T) => void
+  onSuccess?: (data: unknown) => void
   /** Function to call on error */
   onError?: (error: Error) => void
 }
@@ -45,7 +45,7 @@ interface UseApiCallReturn<T> {
  */
 export function useApiCall<T>(
   apiCall: () => Promise<T>,
-  options: UseApiCallOptions<T> = {}
+  options: UseApiCallOptions = {}
 ): UseApiCallReturn<T> {
   const {
     maxRetries = 3,
@@ -60,6 +60,11 @@ export function useApiCall<T>(
   const [attempts, setAttempts] = useState(0)
 
   const abortControllerRef = useRef<AbortController | null>(null)
+  // Store callbacks in refs to avoid stale closures AND dependency changes
+  const onSuccessRef = useRef(onSuccess)
+  const onErrorRef = useRef(onError)
+  onSuccessRef.current = onSuccess
+  onErrorRef.current = onError
 
   const execute = useCallback(async (): Promise<T | null> => {
     // Cancel any previous request
@@ -82,8 +87,8 @@ export function useApiCall<T>(
         setIsLoading(false)
         setError(null)
         
-        if (onSuccess) {
-          onSuccess(result)
+        if (onSuccessRef.current) {
+          onSuccessRef.current(result)
         }
         
         return result
@@ -104,12 +109,12 @@ export function useApiCall<T>(
     setError(lastError)
     setIsLoading(false)
 
-    if (onError && lastError) {
-      onError(lastError)
+    if (onErrorRef.current && lastError) {
+      onErrorRef.current(lastError)
     }
 
     return null
-  }, [apiCall, maxRetries, retryDelay, onSuccess, onError])
+  }, [apiCall, maxRetries, retryDelay])
 
   const retry = useCallback(async (): Promise<T | null> => {
     setAttempts(0)
