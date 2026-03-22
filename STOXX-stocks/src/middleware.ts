@@ -34,13 +34,13 @@ export function middleware(request: NextRequest) {
   )
 
   // Content Security Policy — tighten for production
-  // Allow self + Vercel CDN assets
+  // Allow self + Vercel CDN assets + Google Fonts
   const cspDirectives = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https:",
-    "font-src 'self'",
+    "font-src 'self' https://fonts.gstatic.com",
     "connect-src 'self' https://*.supabase.co https://finnhub.io",
     "frame-ancestors 'none'",
   ]
