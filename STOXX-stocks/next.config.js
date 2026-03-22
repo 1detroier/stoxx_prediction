@@ -4,7 +4,7 @@ const nextConfig = {
   // Ensure TensorFlow.js is treated as a client-side only dependency
   // This prevents it from being bundled into serverless functions
   experimental: {
-    serverComponentsExternalPackages: ['@tensorflow/tfjs', '@tensorflow/tfjs-core'],
+    serverComponentsExternalPackages: ['@tensorflow/tfjs', '@tensorflow/tfjs-core', 'yfinance'],
   },
   webpack: (config, { isServer }) => {
     // TensorFlow.js should never be in server bundles

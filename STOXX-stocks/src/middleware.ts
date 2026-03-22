@@ -40,7 +40,7 @@ export function middleware(request: NextRequest) {
     "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https:",
-    "font-src 'self' https://fonts.gstatic.com",
+    "font-src 'self' https://fonts.gstatic.com 'self' data:",
     "connect-src 'self' https://*.supabase.co https://finnhub.io",
     "frame-ancestors 'none'",
   ]

@@ -17,6 +17,7 @@
     "rate-limiter-flexible": "^10.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "yfinance": "^0.0.6",
     "zod": "^3.23.8"
   },
   "devDependencies": {
