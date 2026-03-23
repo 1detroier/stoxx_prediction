@@ -42,10 +42,10 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // Dynamic import to prevent bundling yfinance in main build
-  const yfinance = await import('yfinance')
-
   try {
+    // Dynamic import yfinance
+    const yf = require('yfinance')
+
     const prices: Array<{
       ticker: string
       date: string
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     for (const ticker of TICKERS) {
       try {
-        const stock = yfinance.Ticker(ticker)
+        const stock = yf.Ticker(ticker)
         const data = await stock.history({ period: '1d', interval: '1d' })
 
         if (data.empty) {
@@ -70,8 +70,8 @@ export async function GET(request: NextRequest) {
           continue
         }
 
-        const latest = data.iloc[-1]
-        const dateObj = data.index[-1]
+        const latest = data.iloc[data.length - 1]
+        const dateObj = data.index[data.length - 1]
         const date = typeof dateObj === 'string' 
           ? dateObj.split('T')[0] 
           : new Date(dateObj).toISOString().split('T')[0]
