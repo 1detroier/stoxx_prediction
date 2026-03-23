@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import yfinance from 'yfinance'
 
 const TICKERS = [
   'ASML.AS', 'SAP.DE', 'NOVO-B.CO', 'MC.PA', 'NESN.SW', 'ROG.SW',
@@ -21,6 +20,8 @@ const TICKERS = [
  * 
  * Security: Protected by CRON_SECRET header
  */
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   // Verify cron secret
   const cronSecret = request.headers.get('x-cron-secret')
@@ -41,6 +42,9 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // Dynamic import to prevent bundling yfinance in main build
+  const yfinance = await import('yfinance')
+
   try {
     const prices: Array<{
       ticker: string
@@ -59,7 +63,7 @@ export async function GET(request: NextRequest) {
     for (const ticker of TICKERS) {
       try {
         const stock = yfinance.Ticker(ticker)
-        const data = stock.history({ period: '1d', interval: '1d' })
+        const data = await stock.history({ period: '1d', interval: '1d' })
 
         if (data.empty) {
           console.warn(`No data for ${ticker}`)
@@ -67,7 +71,10 @@ export async function GET(request: NextRequest) {
         }
 
         const latest = data.iloc[-1]
-        const date = data.index[-1].strftime('%Y-%m-%d')
+        const dateObj = data.index[-1]
+        const date = typeof dateObj === 'string' 
+          ? dateObj.split('T')[0] 
+          : new Date(dateObj).toISOString().split('T')[0]
 
         prices.push({
           ticker,
