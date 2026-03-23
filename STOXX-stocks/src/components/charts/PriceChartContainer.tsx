@@ -37,7 +37,35 @@ export function PriceChartContainer({ ticker, initialResolution = '1m' }: PriceC
     setError(null)
 
     try {
-      // Calculate date range based on resolution
+      // For intraday, use Finnhub API
+      if (resolution === 'intraday') {
+        const response = await fetch(`/api/finnhub/quote?symbol=${encodeURIComponent(ticker)}`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch intraday data')
+        }
+
+        const data = await response.json()
+        
+        // Transform Finnhub quote to chart format
+        // Finnhub returns current quote, we'll create a single candle for today
+        const today = new Date().toISOString().split('T')[0]
+        const quote: Price[] = [{
+          ticker,
+          date: today,
+          open: data.open || data.previous_close,
+          high: data.high,
+          low: data.low,
+          close: data.price,
+          adjusted_close: data.price,
+          volume: null,
+        }]
+        
+        setPrices(quote)
+        return
+      }
+
+      // Calculate date range based on resolution for daily data
       const endDate = new Date()
       const startDate = new Date()
       

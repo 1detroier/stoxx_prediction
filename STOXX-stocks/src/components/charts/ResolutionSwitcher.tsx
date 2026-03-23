@@ -9,6 +9,7 @@ interface ResolutionSwitcherProps {
 }
 
 const RESOLUTIONS: { value: TimeResolution; label: string; description: string }[] = [
+  { value: 'intraday', label: 'Today', description: 'Intraday data for today' },
   { value: '5d', label: '5D', description: 'Last 5 days' },
   { value: '1m', label: '1M', description: 'Last month' },
   { value: '6m', label: '6M', description: 'Last 6 months' },

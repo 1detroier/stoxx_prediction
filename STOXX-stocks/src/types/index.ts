@@ -192,7 +192,7 @@ export interface ApiErrorResponse {
 // Chart Types
 // ============================================
 
-export type TimeResolution = '5d' | '1m' | '6m' | '1y' | '5y'
+export type TimeResolution = '5d' | '1m' | '6m' | '1y' | '5y' | 'intraday'
 
 export interface ChartDataPoint {
   time: string | number
