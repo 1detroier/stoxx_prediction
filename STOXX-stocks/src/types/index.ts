@@ -121,6 +121,69 @@ export interface PredictionsResponse {
   count: number
 }
 
+// ============================================
+// yfinance / Stock API Types
+// ============================================
+
+// Quote response from /api/quote
+export interface QuoteResponse {
+  ticker: string
+  price: number
+  change: number
+  change_percent: number
+  timestamp: number
+  high: number
+  low: number
+  open: number
+  previous_close: number
+  volume: number
+  status: 'market_open' | 'market_closed'
+}
+
+// Historical price data point
+export interface HistoricalDataPoint {
+  date: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+// Historical data response
+export interface HistoricalResponse {
+  ticker: string
+  data: HistoricalDataPoint[]
+}
+
+// Intraday data point
+export interface IntradayDataPoint {
+  timestamp: string  // ISO 8601
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+// Intraday response from /api/intraday
+export interface IntradayResponse {
+  ticker: string
+  status: 'market_open' | 'market_closed'
+  message?: string
+  data: IntradayDataPoint[]
+}
+
+// Cleanup response from cron endpoint
+export interface CleanupResponse {
+  deleted: number
+  timestamp: string
+}
+
+// ============================================
+// Finnhub Legacy Types (deprecated)
+// ============================================
+
 export interface FinnhubQuote {
   symbol: string
   price: number

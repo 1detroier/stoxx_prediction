@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import type { Company, Price, FinnhubQuote, PricesResponse } from '@/types'
+import type { Company, Price, QuoteResponse, PricesResponse } from '@/types'
 import { PriceChartContainer, PredictionRealityChart } from '@/components/charts'
 import { PredictionPanel } from '@/components/predictions'
 import { RiskMetrics } from '@/components/metrics'
@@ -16,7 +16,7 @@ function StockHeader({
   quote 
 }: { 
   company: Company
-  quote: FinnhubQuote | null 
+  quote: QuoteResponse | null 
 }) {
   const priceChange = quote?.change_percent ?? 0
   const isPositive = priceChange >= 0
@@ -92,7 +92,7 @@ function StockLoadingSkeleton() {
 interface StockData {
   company: Company
   prices: Price[]
-  quote: FinnhubQuote | null
+  quote: QuoteResponse | null
 }
 
 export default function StockDetailPage() {
@@ -124,9 +124,9 @@ export default function StockDetailPage() {
       : { ticker, prices: [], count: 0 }
 
     // Fetch live quote
-    let quote: FinnhubQuote | null = null
+    let quote: QuoteResponse | null = null
     try {
-      const quoteResponse = await fetch(`/api/finnhub/quote?symbol=${ticker}`)
+      const quoteResponse = await fetch(`/api/quote?ticker=${ticker}`)
       if (quoteResponse.ok) {
         quote = await quoteResponse.json()
       }

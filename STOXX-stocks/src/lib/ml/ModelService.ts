@@ -213,10 +213,11 @@ export class ModelService {
         featureVector.push(0)
       }
       
-      // Create 3D tensor: each timestep gets the same feature vector
-      const inputData: number[][][] = []
+      // Create 3D tensor: [batch=1, timesteps=60, features=18]
+      // tf.tensor3d expects number[][][] for shape [1, 60, 18]
+      const inputData: number[][][] = [[]]
       for (let t = 0; t < timesteps; t++) {
-        inputData.push([[...featureVector]])
+        inputData[0].push([...featureVector])
       }
       
       const inputTensor = tf.tensor3d(inputData, [1, timesteps, numFeatures], 'float32')

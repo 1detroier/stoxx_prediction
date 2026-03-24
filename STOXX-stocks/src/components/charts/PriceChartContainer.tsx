@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import dynamic from 'next/dynamic'
-import type { TimeResolution, Price, PricesResponse } from '@/types'
+import type { TimeResolution, Price, PricesResponse, IntradayResponse } from '@/types'
 import { ResolutionSwitcher } from './ResolutionSwitcher'
 import { LoadingSpinner, Alert } from '@/components/ui'
 import { useToast } from '@/components/ui/Toast'
@@ -37,29 +37,35 @@ export function PriceChartContainer({ ticker, initialResolution = '1m' }: PriceC
     setError(null)
 
     try {
-      // For intraday, use Finnhub API
+      // For intraday, use /api/intraday endpoint
       if (resolution === 'intraday') {
-        const response = await fetch(`/api/finnhub/quote?symbol=${encodeURIComponent(ticker)}`)
+        const response = await fetch(`/api/intraday?ticker=${encodeURIComponent(ticker)}`)
         
         if (!response.ok) {
           throw new Error('Failed to fetch intraday data')
         }
 
-        const data = await response.json()
+        const data: IntradayResponse = await response.json()
         
-        // Transform Finnhub quote to chart format
-        // Finnhub returns current quote, we'll create a single candle for today
-        const today = new Date().toISOString().split('T')[0]
-        const quote: Price[] = [{
+        // Check market status
+        if (data.status === 'market_closed') {
+          // Show market closed message but don't show empty chart
+          setError(data.message || 'The stock market has not opened yet.')
+          setPrices([])
+          return
+        }
+
+        // Transform intraday data to chart format
+        const quote: Price[] = data.data.map(point => ({
           ticker,
-          date: today,
-          open: data.open || data.previous_close,
-          high: data.high,
-          low: data.low,
-          close: data.price,
-          adjusted_close: data.price,
-          volume: null,
-        }]
+          date: point.timestamp.split('T')[0],
+          open: point.open,
+          high: point.high,
+          low: point.low,
+          close: point.close,
+          adjusted_close: point.close,
+          volume: point.volume,
+        }))
         
         setPrices(quote)
         return
