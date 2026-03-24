@@ -6,7 +6,7 @@ import { DirectionIndicator } from './DirectionIndicator'
 import { ConfidenceMeter } from './ConfidenceMeter'
 import { AccuracyMetrics } from './AccuracyMetrics'
 import { Card, LoadingSpinner, Alert } from '@/components/ui'
-import { usePrediction } from '@/hooks'
+import { usePrediction, useModelMetrics } from '@/hooks'
 
 interface PredictionPanelProps {
   ticker: string
@@ -23,21 +23,17 @@ export function PredictionPanel({ ticker, prices, modelVersion }: PredictionPane
     retryPrediction,
   } = usePrediction(ticker, prices, { autoFetchPrices: false })
 
-  // Mock data for demonstration - in production this would come from ML model
-  const mockMetrics = {
-    overall: 0.72,
-    healthy: 0.78,
-    distressed: 0.61,
-  }
+  // Fetch model metrics from API
+  const { metrics: modelMetrics, isLoading: isMetricsLoading } = useModelMetrics()
 
-  // Show loading state while model loads
-  if (isLoading || isModelLoading) {
+  // Show loading state while model or metrics load
+  if (isLoading || isModelLoading || isMetricsLoading) {
     return (
       <Card>
         <div className="flex flex-col items-center justify-center py-8 space-y-4">
           <LoadingSpinner size="lg" />
           <p className="text-text-secondary text-sm">
-            {isModelLoading ? 'Loading ML model...' : 'Running prediction...'}
+            {isModelLoading ? 'Loading ML model...' : isMetricsLoading ? 'Loading model metrics...' : 'Running prediction...'}
           </p>
         </div>
       </Card>
@@ -109,7 +105,13 @@ export function PredictionPanel({ ticker, prices, modelVersion }: PredictionPane
         <div className="border-t border-border" />
 
         {/* Model Metrics */}
-        <AccuracyMetrics metrics={mockMetrics} />
+        {modelMetrics ? (
+          <AccuracyMetrics metrics={modelMetrics} />
+        ) : (
+          <div className="text-center text-sm text-text-muted">
+            Accuracy: N/A
+          </div>
+        )}
       </div>
     </Card>
   )
