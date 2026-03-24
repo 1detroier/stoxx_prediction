@@ -9,6 +9,7 @@
 // - Type-safe responses
 
 import YahooFinance from 'yahoo-finance2'
+import { getTimezoneForTicker, calculateIntradayPeriod1 } from './timezones'
 
 // Create an instance of Yahoo Finance client
 const yahooFinance = new YahooFinance()
@@ -425,13 +426,20 @@ export async function getHistorical(
 /**
  * Get intraday 1-minute data for the current trading day.
  * Uses 1-minute cache. Returns empty data if market is closed.
+ * 
+ * @param ticker - Stock ticker symbol (e.g., "AAPL", "ABBN.SW")
+ * @param timezone - Optional IANA timezone string (e.g., "Europe/Zurich")
+ *                    If not provided, will be determined from ticker suffix
  */
-export async function getIntraday(ticker: string): Promise<IntradayData> {
+export async function getIntraday(ticker: string, timezone?: string): Promise<IntradayData> {
   if (!ticker || typeof ticker !== 'string') {
     throw new ValidationError('Ticker is required')
   }
   
   const normalizedTicker = ticker.toUpperCase().trim()
+  
+  // Determine timezone: use provided or derive from ticker
+  const tz = timezone ?? getTimezoneForTicker(normalizedTicker)
   
   // Check market status first (pass ticker for correct market hours check)
   const marketStatus = getMarketStatus(normalizedTicker)
@@ -455,8 +463,9 @@ export async function getIntraday(ticker: string): Promise<IntradayData> {
   
   return withRetry(async () => {
     // For intraday, get today's data using chart API (supports 1m interval)
+    // Calculate period1 based on timezone - market open time
     const now = new Date()
-    const period1 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 30, 0)
+    const period1 = calculateIntradayPeriod1(tz)
     
     // Use try-catch to handle any chart API errors
     let chartResult: Record<string, unknown> = {}
