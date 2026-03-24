@@ -138,10 +138,39 @@ const HISTORICAL_TTL_MS = 15 * 60 * 1000 // 15 minutes for historical
 // ============================================
 
 /**
+ * Check if a ticker is a US stock.
+ * US stocks have no suffix or end with .US
+ * European stocks have suffixes like .SW, .DE, .PA, .LS, etc.
+ */
+export function isUSTicker(ticker: string): boolean {
+  const normalized = ticker.toUpperCase().trim()
+  
+  // Check if ticker ends with a known European suffix
+  const europeanSuffixes = ['.SW', '.DE', '.PA', '.LS', '.TO', '.VI', '.OL', '.HE', '.AX', '.NZ']
+  for (const suffix of europeanSuffixes) {
+    if (normalized.endsWith(suffix)) {
+      return false
+    }
+  }
+  
+  // US tickers: no suffix or .US suffix
+  return true
+}
+
+/**
  * Check if US stock market is currently open.
  * Market hours: 09:30 - 16:00 ET (Monday-Friday)
+ * @param ticker - Optional ticker to check if it's a US stock
+ *              - If ticker provided and is NOT a US ticker, returns true (skip market hours check)
+ *              - If ticker is US ticker or no ticker provided, uses US market hours logic
  */
-export function isMarketOpen(): boolean {
+export function isMarketOpen(ticker?: string): boolean {
+  // If ticker is provided and it's not a US ticker, skip market hours check
+  // (European markets have different hours, so we allow intraday data)
+  if (ticker !== undefined && !isUSTicker(ticker)) {
+    return true
+  }
+  
   const now = new Date()
   
   // Get current time in US Eastern Time
@@ -181,12 +210,13 @@ function toEasternTime(date: Date): Date {
 
 /**
  * Get market status with message
+ * @param ticker - Optional ticker to check if it's a US stock
  */
-export function getMarketStatus(): { 
+export function getMarketStatus(ticker?: string): { 
   status: 'market_open' | 'market_closed'
   message?: string 
 } {
-  if (isMarketOpen()) {
+  if (isMarketOpen(ticker)) {
     return { status: 'market_open' }
   }
   return { 
@@ -403,8 +433,8 @@ export async function getIntraday(ticker: string): Promise<IntradayData> {
   
   const normalizedTicker = ticker.toUpperCase().trim()
   
-  // Check market status first
-  const marketStatus = getMarketStatus()
+  // Check market status first (pass ticker for correct market hours check)
+  const marketStatus = getMarketStatus(normalizedTicker)
   
   if (marketStatus.status === 'market_closed') {
     return {
