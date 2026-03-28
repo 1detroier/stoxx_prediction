@@ -1,0 +1,53 @@
+# Dependencies
+STOXX-stocks/node_modules/
+STOXX-stocks/.pnp/
+STOXX-stocks/.pnp.js
+
+# Build outputs
+STOXX-stocks/.next/
+STOXX-stocks/out/
+STOXX-stocks/build/
+STOXX-stocks/dist/
+
+# Environment files (NEVER commit these)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+STOXX-stocks/.env
+STOXX-stocks/.env.local
+
+# Python (ML pipeline — keep source, ignore data/cache)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+STOXX-stocks/training/data/raw/
+STOXX-stocks/training/data/processed/
+STOXX-stocks/training/data/processed_tmp/
+*.h5
+*.pkl
+*.joblib
+*.keras
+
+# ML TFJS output — NEGATE above patterns for deployed model files
+!STOXX-stocks/public/models/distress/model.json
+!STOXX-stocks/public/models/distress/group1-shard1of1.bin
+
+# ML model variants (local training outputs) — *.keras above covers individual files
+STOXX-stocks/models/
+STOXX-stocks/models_bce/
+STOXX-stocks/models_bce_wf/
+STOXX-stocks/models_focal/
+
+# Data temp outputs
+STOXX-stocks/data/processed_tmp/
+
+# Supabase local temp
+.supabase/
+STOXX-stocks/supabase/.temp/

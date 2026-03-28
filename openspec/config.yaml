@@ -1,0 +1,89 @@
+# OpenSpec Configuration — STOXX-stocks
+# Defines SDD rules and project conventions
+
+project:
+  name: STOXX-stocks
+  description: European Stock Prediction Platform — LSTM-based directional prediction
+  stack: nextjs14
+  language: typescript
+  persistence: openspec
+
+# SDD Phase Rules
+rules:
+  proposal:
+    required: true
+    format: markdown
+    sections: [executive_summary, scope, approach, risks, open_questions]
+
+  spec:
+    required: true
+    format: delta
+    validation:
+      - must_have_requirements
+      - must_have_scenarios
+      - scenarios_must_have_given_when_then
+
+  design:
+    required: true
+    sections: [architecture_decisions, components, data_flow, tradeoffs]
+
+  tasks:
+    required: true
+    format: checklist
+    max_batch_size: 5
+    require_spec_ref: true
+
+  verify:
+    severity_levels: [CRITICAL, WARNING, SUGGESTION]
+    auto_fix: false
+
+  archive:
+    sync_delta_specs: true
+    require_verify_pass: false  # project has not formally verified yet
+
+# Project Conventions
+conventions:
+  components:
+    style: functional
+    naming: PascalCase
+    location: src/components/{domain}/
+    barrel_exports: true
+
+  api_routes:
+    location: src/app/api/
+    pattern: route.ts
+    auth: proxy_pattern  # all external APIs proxied server-side
+
+  libraries:
+    location: src/lib/
+    patterns:
+      - repositories (Supabase access)
+      - ml (TensorFlow.js inference)
+      - api-utils (shared helpers)
+
+  hooks:
+    location: src/hooks/
+    naming: "use{Name}"
+
+  types:
+    location: src/types/
+    naming: PascalCase interfaces
+
+  training:
+    location: training/
+    language: python
+    pipeline: [data_fetcher, feature_engineer, train_lstm, upload_to_supabase, validation_suite]
+
+# Skill Matching
+skill_context:
+  code_patterns:
+    "**/*.tsx": [react, typescript]
+    "**/*.ts": [typescript]
+    "src/app/api/**": [nextjs-api]
+    "training/**/*.py": [python-data, tensorflow-python]
+    "**/supabase/**": [supabase]
+
+  task_patterns:
+    "chart|graph|visuali": [tradingview]
+    "model|predict|infer": [tensorflowjs]
+    "database|query|supabase": [supabase]
